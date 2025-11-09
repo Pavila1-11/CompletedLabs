@@ -6,7 +6,7 @@ TARGET = benchmark
 
 # Default target
 all: opt
-
+#LL
 # Compile with high optimization
 opt:
 	$(CC) -O3 -g -o $(TARGET) $(SRC)
