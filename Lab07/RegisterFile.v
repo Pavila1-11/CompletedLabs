@@ -1,3 +1,5 @@
+`timescale 1ns / 1ps
+
 module RegisterFile(
     output wire [63:0] BusA,
     output wire [63:0] BusB,
@@ -8,24 +10,32 @@ module RegisterFile(
     input  wire        RegWr,
     input  wire        Clk
 );
-    reg [63:0] register_file [0:31];
 
-    // --- FIX: Initialize all registers to 0 ---
-    initial begin
-        integer i;
-        for (i = 0; i < 32; i = i + 1) begin
-            register_file[i] = 64'b0;
-        end
-    end
-    // --- End of Fix ---
+  reg [63:0] rf [31:0];
+  integer i;
+  initial begin
+    for (i = 0; i < 32; i = i + 1)
+      rf[i] = 64'd0;
+  end
 
-    assign #3 BusA = (RA == 5'd31) ? 64'b0 : register_file[RA];
-    assign #3 BusB = (RB == 5'd31) ? 64'b0 : register_file[RB];
+  always @(posedge Clk) begin
+    if (RegWr && RW != 5'd31)
+      rf[RW] <= BusW;
+  end
 
-    always @(posedge Clk) begin
-        if (RegWr && (RW != 5'd31)) begin
-            register_file[RW] <= BusW;
-        end
-    end
+  reg [63:0] a_next, b_next;
+  always @* begin
+    a_next = (RA == 5'd31) ? 64'd0 : rf[RA];
+    b_next = (RB == 5'd31) ? 64'd0 : rf[RB];
+
+    // Break combinational loop with tiny delay on bypass
+    if (RegWr && RW == RA && RW != 5'd31) a_next = #1 BusW;
+    if (RegWr && RW == RB && RW != 5'd31) b_next = #1 BusW;
+  end
+
+  assign BusA = a_next;
+  assign BusB = b_next;
+
 endmodule
+
 
